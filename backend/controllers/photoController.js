@@ -16,6 +16,10 @@ module.exports = {
     list: function (req, res) {
         PhotoModel.find()
             .populate('postedBy')
+            .populate({
+                path: 'comments',
+                populate: { path: 'user' } // Ensure that the user field is populated for each comment
+            })
             .exec(function (err, photos) {
                 if (err) {
                     return res.status(500).json({
@@ -24,9 +28,9 @@ module.exports = {
                 }
                 var data = [];
                 data.photos = photos;
-                //return res.render('photo/list', data);
-                return res.json(photos);
+                return res.json(photos); // Return the populated photos with comments and users
             });
+
     },
 
     /**
@@ -35,22 +39,25 @@ module.exports = {
     show: function (req, res) {
         var id = req.params.id;
 
-        PhotoModel.findOne({_id: id}, function (err, photo) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting photo.', error: err
-                });
-            }
+        PhotoModel.find()
+            .populate('postedBy')
+            .populate({
+                path: 'comments',
+                populate: { path: 'user' } // Ensure that the user field is populated for each comment
+            })
+            .exec(function (err, photos) {
+                if (err) {
+                    return res.status(500).json({
+                        message: 'Error when getting photo.', error: err
+                    });
+                }
+                var data = [];
+                data.photos = photos;
+                return res.json(photos); // Return the populated photos with comments and users
+            });
 
-            if (!photo) {
-                return res.status(404).json({
-                    message: 'No such photo'
-                });
-            }
-
-            return res.json(photo);
-        });
     },
+
 
     /**
      * photoController.create()
@@ -76,28 +83,20 @@ module.exports = {
             return res.status(201).json(photo);
             //return res.redirect('/photos');
         });
-    },
-    addComment: function (req, res) {
+    }, addComment: function (req, res) {
         console.log('Prejeto telo:', req.body); // Tukaj boš zdaj dobil vrednosti iz FormData
 
         const comment = new CommentModel({
-            title: req.body.title,
-            content: req.body.content,
-            belongsTo: req.session.userId,
+            title: req.body.title, content: req.body.content, belongsTo: req.session.userId,
         });
         const id = req.params.id;
         comment.save((err) => {
-            if (err) return res.status(500).json({ error: 'Napaka pri shranjevanju komentarja' });
+            if (err) return res.status(500).json({error: 'Napaka pri shranjevanju komentarja'});
 
-            PhotoModel.findByIdAndUpdate(
-                req.params.id,
-                { $push: { comments: comment } },
-                { new: true },
-                (err, photo) => {
-                    if (err || !photo) return res.status(500).json({ error: 'Slika ni najdena' });
-                    return res.status(201).json(comment);
-                }
-            );
+            PhotoModel.findByIdAndUpdate(req.params.id, {$push: {comments: comment}}, {new: true}, (err, photo) => {
+                if (err || !photo) return res.status(500).json({error: 'Slika ni najdena'});
+                return res.status(201).json(comment);
+            });
         });
     },
 

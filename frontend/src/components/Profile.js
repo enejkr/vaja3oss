@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 function Profile(){
     const userContext = useContext(UserContext); 
     const [profile, setProfile] = useState({});
+    const[file, setFile] = useState('');
 
     useEffect(function(){
         const getProfile = async function(){
@@ -14,6 +15,7 @@ function Profile(){
         }
         getProfile();
     }, []);
+
 
     return (
         <>

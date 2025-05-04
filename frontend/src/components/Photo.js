@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function Photo(props) {
     const { photo } = props;
@@ -10,8 +10,20 @@ function Photo(props) {
     const [userLiked, setUserLiked] = useState(false);
     const [userDisliked, setUserDisliked] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
+    const [comments, setComments] = useState(photo.comments || []);  // Store comments
 
-    // Funkcija za like
+    // Fetch comments if not loaded already
+    useEffect(() => {
+        console.log(comments);
+
+        if (!photo.comments || photo.comments.length === 0) {
+            fetch(`http://localhost:3001/photos/${photo._id}`)
+                .then(response => response.json())
+                .then(data => setComments(data.comments || []))
+                .catch(error => console.error('Error fetching comments:', error));
+        }
+    }, [photo._id, photo.comments]);
+
     const handleLike = () => {
         if (userLiked) return;
 
@@ -34,7 +46,6 @@ function Photo(props) {
         });
     };
 
-    // Funkcija za dislike
     const handleDislike = () => {
         if (userDisliked) return;
 
@@ -57,10 +68,8 @@ function Photo(props) {
         });
     };
 
-    // Funkcija za preklop prikaza podrobnosti
     const toggleDetails = () => setShowDetails(prevState => !prevState);
 
-    // Funkcija za pošiljanje komentarja
     async function onSubmit(e) {
         e.preventDefault();
 
@@ -86,6 +95,7 @@ function Photo(props) {
             const data = await res.json();
             if (res.ok) {
                 setUploaded(true);
+                setComments(prev => [...prev, data.comment]);  // Add new comment to the list
             } else {
                 alert('Napaka pri pošiljanju komentarja');
             }
@@ -136,6 +146,23 @@ function Photo(props) {
                         </form>
 
                         {uploaded && <p>Komentar je bil uspešno dodan!</p>}
+                        <div className="mt-3">
+                            <h3>Komentarji: </h3>
+
+                            {comments.length > 0 ? (
+                                comments.map((comment) => (
+                                    <div key={comment._id} className="comment">
+                                        <h5>{comment?.user?.username || 'Anonymous'}</h5>
+                                        <p>{comment.title}</p>
+                                        <p>{comment.content}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p>No comments yet.</p>
+                            )}
+
+
+                        </div>
                     </div>
                 )}
             </div>
