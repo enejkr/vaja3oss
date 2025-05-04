@@ -1,4 +1,7 @@
+const CommentController = require('./commentController'); // Uvozi commentController
+
 var PhotoModel = require('../models/photoModel.js');
+var CommentModel = require('../models/commentModel.js');
 
 /**
  * photoController.js
@@ -74,6 +77,30 @@ module.exports = {
             //return res.redirect('/photos');
         });
     },
+    addComment: function (req, res) {
+        console.log('Prejeto telo:', req.body); // Tukaj boš zdaj dobil vrednosti iz FormData
+
+        const comment = new CommentModel({
+            title: req.body.title,
+            content: req.body.content,
+            belongsTo: req.session.userId,
+        });
+        const id = req.params.id;
+        comment.save((err) => {
+            if (err) return res.status(500).json({ error: 'Napaka pri shranjevanju komentarja' });
+
+            PhotoModel.findByIdAndUpdate(
+                req.params.id,
+                { $push: { comments: comment } },
+                { new: true },
+                (err, photo) => {
+                    if (err || !photo) return res.status(500).json({ error: 'Slika ni najdena' });
+                    return res.status(201).json(comment);
+                }
+            );
+        });
+    },
+
 
     /**
      * photoController.update()
