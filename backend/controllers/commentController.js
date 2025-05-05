@@ -55,7 +55,8 @@ module.exports = {
         var comment = new CommentModel({
 			title : req.body.title,
 			content : req.body.content,
-            belongsTo : req.body.userId
+            user : req.body.user,
+            uploaded : new Date(),
         });
 
         comment.save(function (err, comment) {

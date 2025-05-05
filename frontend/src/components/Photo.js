@@ -10,12 +10,9 @@ function Photo(props) {
     const [userLiked, setUserLiked] = useState(false);
     const [userDisliked, setUserDisliked] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
-    const [comments, setComments] = useState(photo.comments || []);  // Store comments
+    const [comments, setComments] = useState(photo.comments || []);
 
-    // Fetch comments if not loaded already
     useEffect(() => {
-        console.log(comments);
-
         if (!photo.comments || photo.comments.length === 0) {
             fetch(`http://localhost:3001/photos/${photo._id}`)
                 .then(response => response.json())
@@ -23,6 +20,11 @@ function Photo(props) {
                 .catch(error => console.error('Error fetching comments:', error));
         }
     }, [photo._id, photo.comments]);
+
+    useEffect(() => {
+        console.log("Komentarji:", comments);
+        comments.forEach(c => console.log("Uporabnik komentarja:", c.user));
+    }, [comments]);
 
     const handleLike = () => {
         if (userLiked) return;
@@ -73,29 +75,24 @@ function Photo(props) {
     async function onSubmit(e) {
         e.preventDefault();
 
-        if (!title) {
-            alert("Vnesite naslov!");
+        if (!title || !content) {
+            alert("Vnesite naslov in vsebino!");
             return;
         }
-        if (!content) {
-            alert("Vnesite vsebino!");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('content', content);
 
         try {
             const res = await fetch(`http://localhost:3001/photos/${photo._id}/addComment`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 credentials: 'include',
-                body: formData,
+                body: JSON.stringify({ title, content }),
             });
             const data = await res.json();
             if (res.ok) {
                 setUploaded(true);
-                setComments(prev => [...prev, data.comment]);  // Add new comment to the list
+                setComments(prev => [...prev, data]);
             } else {
                 alert('Napaka pri pošiljanju komentarja');
             }
@@ -103,6 +100,8 @@ function Photo(props) {
             console.error('Napaka pri pošiljanju komentarja:', error);
         }
     }
+
+    if (!photo) return <div>Loading...</div>;
 
     return (
         <div className="mb-3 position-relative">
@@ -125,8 +124,8 @@ function Photo(props) {
                     <div className="mt-3">
                         <h5>Podrobnosti:</h5>
                         <p>{photo.description}</p>
-                        <p>Likes: {photo.likes.length}</p>
-                        <p>Dislikes: {photo.dislikes.length}</p>
+                        <p>Likes: {photo.likes?.length || 0}</p>
+                        <p>Dislikes: {photo.dislikes?.length || 0}</p>
 
                         <form className="form-group" onSubmit={onSubmit}>
                             <input
@@ -147,12 +146,11 @@ function Photo(props) {
 
                         {uploaded && <p>Komentar je bil uspešno dodan!</p>}
                         <div className="mt-3">
-                            <h3>Komentarji: </h3>
-
+                            <h3>Komentarji:</h3>
                             {comments.length > 0 ? (
                                 comments.map((comment) => (
                                     <div key={comment._id} className="comment">
-                                        <h5>{comment?.user?.username || 'Anonymous'}</h5>
+                                        <h5>{comment?.user?.username}</h5>
                                         <p>{comment.title}</p>
                                         <p>{comment.content}</p>
                                     </div>
@@ -160,8 +158,6 @@ function Photo(props) {
                             ) : (
                                 <p>No comments yet.</p>
                             )}
-
-
                         </div>
                     </div>
                 )}

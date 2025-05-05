@@ -1,5 +1,4 @@
 const CommentController = require('./commentController'); // Uvozi commentController
-
 var PhotoModel = require('../models/photoModel.js');
 var CommentModel = require('../models/commentModel.js');
 
@@ -18,8 +17,9 @@ module.exports = {
             .populate('postedBy')
             .populate({
                 path: 'comments',
-                populate: { path: 'user' } // Ensure that the user field is populated for each comment
+                populate: { path: 'user', select: 'username' }  // Samo username
             })
+
             .exec(function (err, photos) {
                 if (err) {
                     return res.status(500).json({
@@ -37,26 +37,25 @@ module.exports = {
      * photoController.show()
      */
     show: function (req, res) {
-        var id = req.params.id;
-
-        PhotoModel.find()
+        PhotoModel.findById(req.params.id)
             .populate('postedBy')
             .populate({
                 path: 'comments',
-                populate: { path: 'user' } // Ensure that the user field is populated for each comment
+                populate: { path: 'user', select: 'username' }
             })
-            .exec(function (err, photos) {
+            .exec(function (err, photo) {
                 if (err) {
                     return res.status(500).json({
-                        message: 'Error when getting photo.', error: err
+                        message: 'Napaka pri pridobivanju fotografije', error: err
                     });
                 }
-                var data = [];
-                data.photos = photos;
-                return res.json(photos); // Return the populated photos with comments and users
+                if (!photo) {
+                    return res.status(404).json({ message: 'Ni najdene fotografije' });
+                }
+                return res.json(photo);
             });
-
     },
+
 
 
     /**
@@ -71,6 +70,8 @@ module.exports = {
             views: 0,
             likes: [],
             dislikes: [],
+            uploaded : new Date(),
+
         });
 
         photo.save(function (err, photo) {
@@ -83,11 +84,12 @@ module.exports = {
             return res.status(201).json(photo);
             //return res.redirect('/photos');
         });
-    }, addComment: function (req, res) {
+    },
+    addComment: function (req, res) {
         console.log('Prejeto telo:', req.body); // Tukaj boš zdaj dobil vrednosti iz FormData
 
         const comment = new CommentModel({
-            title: req.body.title, content: req.body.content, belongsTo: req.session.userId,
+            title: req.body.title, content: req.body.content, user: req.session.userId,
         });
         const id = req.params.id;
         comment.save((err) => {
